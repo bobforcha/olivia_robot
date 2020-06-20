@@ -236,7 +236,6 @@ void setup() {
 
 void loop() {
   // main loop
-  motorClient = motorServer.available();
   unsigned long startTime = millis();
   // Try to connect for 1 minute, then go to sleep.
   while(!motorClient.connected()) {
