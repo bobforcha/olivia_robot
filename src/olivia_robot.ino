@@ -82,18 +82,105 @@ void myPage(const char* url, ResponseCallback* cb, void* cbArg, Reader* body, Wr
 
 STARTUP(softap_set_application_page_handler(myPage, nullptr));
 
+/*******************************************************************************
+ * Main program declarations
+ ******************************************************************************/
+// sleep timer 3 minutes
+unsigned long sleepTimer = 3*60000;
+
 // pin declarations
-int button = A1;
-int motor_1_enable = D0;
-int motor_1_input_1 = D1;
-int motor_1_input_2 = D2;
-int motor_2_enable = D3; 
+int left_motor_enable = A4;
+int left_motor_1 = A0;
+int left_motor_2 = A1;
+
+int right_motor_enable = D0;
+int right_motor_1 = D1;
+int right_motor_2 = D2;
+
 int LED = D7;
 
-// setup() runs once, when the device is first turned on.
+// TCP server for receiving motor commands
+TCPServer motorServer = TCPServer(23);
+TCPClient motorClient;
+
+// motor functions
+void left_motor_forward(int speed=255) {
+  digitalWrite(left_motor_enable, LOW);
+  digitalWrite(left_motor_1, HIGH);
+  digitalWrite(left_motor_2, LOW);
+  analogWrite(left_motor_enable, speed);
+}
+
+void right_motor_forward(int speed) {
+  digitalWrite(right_motor_enable, LOW);
+  digitalWrite(right_motor_1, LOW);
+  digitalWrite(right_motor_2, HIGH);
+  analogWrite(right_motor_enable, speed);
+}
+
+void left_motor_backward(int speed) {
+  digitalWrite(left_motor_enable, LOW);
+  digitalWrite(left_motor_1, HIGH);
+  digitalWrite(left_motor_1, LOW);
+  analogWrite(left_motor_enable, HIGH);
+}
+
+void right_motor_backward(int speed) {
+  digitalWrite(right_motor_enable, LOW);
+  digitalWrite(right_motor_1, HIGH);
+  digitalWrite(right_motor_2, LOW);
+  analogWrite(right_motor_enable, speed);
+}
+
+void left_motor_stop() {
+  digitalWrite(left_motor_enable, LOW);
+  digitalWrite(left_motor_1, LOW);
+  digitalWrite(left_motor_2,LOW);
+}
+
+void right_motor_stop() {
+  digitalWrite(right_motor_enable, LOW);
+  digitalWrite(right_motor_1, LOW);
+  digitalWrite(right_motor_2, LOW);
+}
+
+void rover_forward(int vel=255) {
+  left_motor_forward(vel);
+  right_motor_forward(vel);
+}
+
+void rover_stop() {
+  left_motor_stop();
+  right_motor_stop();
+}
+
+/*******************************************************************************
+ * setup()
+ ******************************************************************************/
+
 void setup() {
-  // Put initialization like pinMode and begin functions here.
+  // pin modes
+  pinMode(LED, OUTPUT);
+
+  pinMode(left_motor_enable, OUTPUT);
+  pinMode(left_motor_1, OUTPUT);
+  pinMode(left_motor_2, OUTPUT);
+
+  pinMode(right_motor_enable, OUTPUT);
+  pinMode(right_motor_1, OUTPUT);
+  pinMode(right_motor_2, OUTPUT);
+
+  // default pin settings
+  digitalWrite(left_motor_enable, LOW);
+  digitalWrite(right_motor_enable, LOW);
+  digitalWrite(left_motor_1, LOW);
+  digitalWrite(left_motor_2, LOW);
+  digitalWrite(right_motor_1, LOW);
+  digitalWrite(right_motor_2, LOW);
+
+  // WiFi on
   WiFi.on();
+
   // set static IP Address
   IPAddress robotAddress(192, 168, 66, 5);
   IPAddress netmask(255, 255, 255, 0);
@@ -101,8 +188,10 @@ void setup() {
   IPAddress dns(192, 168, 1, 1);
   WiFi.setStaticIP(robotAddress, netmask, gateway, dns);
   WiFi.useStaticIP();
+  WiFi.setHostname("olivia-robot");
 
-  // set WiFi to listen mode so credentials can be set
+  // set WiFi to listen mode so credentials can be set if they don't already
+  // exist
   if(WiFi.hasCredentials()) {
     WiFi.connect();
   }
@@ -110,21 +199,41 @@ void setup() {
     WiFi.listen();
   }
 
-  // pin modes
-  pinMode(button, INPUT_PULLDOWN);
-  pinMode(LED, OUTPUT);
-  pinMode(motor_1_enable, OUTPUT);
-  pinMode(motor_1_input_1, OUTPUT);
-  pinMode(motor_1_input_2, OUTPUT);
+  // start TCP Server for receiving motor commands
+  motorServer.begin();
+
+  // start serial port for development purposes
+  Serial.begin(9600);
+  waitFor(Serial.isConnected, 30000);
+  
+  if(Serial.isConnected()) {
+    digitalWrite(LED, HIGH);
+    Serial.println("Hello! I am Olivia Robot.");
+    Serial.println(WiFi.localIP());
+    Serial.println(WiFi.SSID());
+    Serial.println(WiFi.hostname());
+  }
 }
 
-// loop() runs over and over again, as quickly as it can execute.
+/*******************************************************************************
+ * loop()
+ ******************************************************************************/
+
 void loop() {
-  // The core of your code will likely live here.
-  digitalWrite(motor_1_enable, LOW);
-  digitalWrite(motor_1_input_1, HIGH);
-  digitalWrite(motor_1_input_2, LOW);
-  while(digitalRead(button) == HIGH) {
-    digitalWrite(motor_1_enable, HIGH);
+  // main loop
+  unsigned long startTime = millis();
+  // Try to connect for 1 minute, then go to sleep.
+  while(!motorClient.connected()) {
+    if(millis() - startTime <= sleepTimer) {
+      motorClient = motorServer.available();
+      delay(200);
+    }
+    else {
+      System.sleep(WKP, RISING);
+    }
+  }
+  motorServer.println(666);
+  while(motorClient.available()) {
+    motorServer.write(motorClient.read());
   }
 }
