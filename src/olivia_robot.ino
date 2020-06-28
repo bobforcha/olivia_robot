@@ -232,7 +232,11 @@ void loop() {
       System.sleep(WKP, RISING);
     }
   }
-  motorServer.println(666);
+  motorClient.println("Connected to Olivia Robot!");
+  motorClient.println(WiFi.localIP());
+  motorClient.println(WiFi.subnetMask());
+  
+
   while(motorClient.available()) {
     motorServer.write(motorClient.read());
   }
