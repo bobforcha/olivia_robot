@@ -12,7 +12,6 @@
 #include "Particle.h"
 #include "softap_http.h"
 
-// Not using Particle cloud for this project, so manual mode it is.
 void myPage(const char* url, ResponseCallback* cb, void* cbArg, Reader* body, Writer* result, void* reserved);
 void right_motor_forward(int speed);
 void left_motor_backward(int speed);
@@ -22,8 +21,12 @@ void right_motor_stop();
 void rover_stop();
 void setup();
 void loop();
-#line 11 "c:/Users/bobfo/olivia_robot/olivia_robot/src/olivia_robot.ino"
+#line 10 "c:/Users/bobfo/olivia_robot/olivia_robot/src/olivia_robot.ino"
+#define SERIAL_DEBUG 1
+
+// Not using Particle cloud for this project, so manual mode it is.
 SYSTEM_MODE(MANUAL);
+SYSTEM_THREAD(ENABLED);
 
 /*******************************************************************************
  * Web page for initial credentials setting.
@@ -209,6 +212,10 @@ void setup() {
   // exist
   if(WiFi.hasCredentials()) {
     WiFi.connect();
+    while(!WiFi.ready()){
+      Particle.process();
+    };
+    Particle.process();
   }
   else {
     WiFi.listen();
@@ -216,17 +223,20 @@ void setup() {
 
   // start TCP Server for receiving motor commands
   motorServer.begin();
-
+  Particle.process();
   // start serial port for development purposes
-  Serial.begin(9600);
-  waitFor(Serial.isConnected, 30000);
-  
-  if(Serial.isConnected()) {
-    digitalWrite(LED, HIGH);
-    Serial.println("Hello! I am Olivia Robot.");
-    Serial.println(WiFi.localIP());
-    Serial.println(WiFi.SSID());
-    Serial.println(WiFi.hostname());
+  if(SERIAL_DEBUG) {
+    Serial.begin(9600);
+    waitFor(Serial.isConnected, 30000);
+
+    if(Serial.isConnected()) {
+      digitalWrite(LED, HIGH);
+      Serial.println("Hello! I am Olivia Robot.");
+      Serial.println(WiFi.localIP().toString());
+      Serial.println(WiFi.subnetMask().toString());
+      Serial.println(WiFi.SSID());
+      Serial.println(WiFi.hostname());
+    }
   }
 }
 
@@ -238,17 +248,55 @@ void loop() {
   // main loop
   unsigned long startTime = millis();
   // Try to connect for 1 minute, then go to sleep.
-  while(!motorClient.connected()) {
+  while(WiFi.ready()) {
+    motorClient = motorServer.available();
+    while(motorClient) {
+      if(SERIAL_DEBUG) {
+        Serial.println("motorClient created.");
+      }
+
+      if(motorClient.connected()) {
+        if(SERIAL_DEBUG) {
+          Serial.println("Telnet client connected.");
+        }
+        motorClient.println("Connected to Olivia Robot!");
+        motorClient.println(WiFi.localIP());
+        motorClient.println(WiFi.subnetMask());
+      }
+
+      while(motorClient.available()) {
+        motorServer.write(motorClient.read());
+      }
+    }
+
     if(millis() - startTime <= sleepTimer) {
+      if(SERIAL_DEBUG) {
+        // Serial.println("no client");
+      }
+      Particle.process();
       motorClient = motorServer.available();
-      delay(200);
     }
     else {
       System.sleep(WKP, RISING);
     }
+    
+    if(SERIAL_DEBUG) {
+      Serial.println("WiFi is still connected ...");
+      IPAddress ip = WiFi.resolve("www.google.com");
+      if(ip) {
+        Serial.printlnf("Google connected at: %s", ip.toString());
+      }
+      else {
+        Serial.println("No Google.");
+      }
+    }
+    delay(1000);
   }
-  motorServer.println(666);
-  while(motorClient.available()) {
-    motorServer.write(motorClient.read());
+
+  Particle.process();
+
+  if(SERIAL_DEBUG) {
+    bool wifiReady = WiFi.ready();
+    Serial.printlnf("WiFi.ready(): %d", wifiReady);
   }
 }
