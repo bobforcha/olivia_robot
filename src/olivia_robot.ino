@@ -103,7 +103,7 @@ int right_motor_2 = D2;
 int LED = D7;
 
 // TCP server for receiving motor commands
-TCPServer motorServer = TCPServer(23);
+TCPServer motorServer = TCPServer(5601);
 TCPClient motorClient;
 
 // motor functions
@@ -183,14 +183,7 @@ void setup() {
 
   // WiFi on
   WiFi.on();
-
-  // set static IP Address
-  IPAddress robotAddress(192, 168, 66, 5);
-  IPAddress netmask(255, 255, 255, 0);
-  IPAddress gateway(192, 168, 1, 1);
-  IPAddress dns(192, 168, 1, 1);
-  WiFi.setStaticIP(robotAddress, netmask, gateway, dns);
-  WiFi.useStaticIP();
+  WiFi.useDynamicIP();
   WiFi.setHostname("olivia-robot");
 
   // set WiFi to listen mode so credentials can be set if they don't already
@@ -231,57 +224,96 @@ void setup() {
 
 void loop() {
   // main loop
-  unsigned long startTime = millis();
-  // Try to connect for 1 minute, then go to sleep.
+  if(SERIAL_DEBUG) {
+    Serial.println("Main loop begin");
+  }
+  // set loop startTime
+  unsigned long loopStartTime = millis();
+
+  bool wifiConnected = false;
+  // loop while WiFi is connected
   while(WiFi.ready()) {
+    if(SERIAL_DEBUG && !wifiConnected) {
+      Serial.println("WiFi ready loop begin");
+    }
+    wifiConnected = true;
+    // check for client connection
     motorClient = motorServer.available();
-    while(motorClient) {
-      if(SERIAL_DEBUG) {
-        Serial.println("motorClient created.");
+
+    bool isNewConnection = true;
+    // loop to run while client is connected
+    while(motorClient.connected()) {
+      // check if this is a new connection
+      if(isNewConnection) {
+        // Say hi
+        if(SERIAL_DEBUG) { Serial.println("Client connected."); }
+        motorServer.println("You are connected to Olivia Robot!");
+        motorServer.println("My IP Address is: ");
+        motorServer.println(WiFi.localIP().toString());
+        isNewConnection = false;
       }
 
-      if(motorClient.connected()) {
-        if(SERIAL_DEBUG) {
-          Serial.println("Telnet client connected.");
+      // array to store 1 byte command and ending characters
+      char command[3];
+      // check if command available from client
+      while(motorClient.available()) { 
+        // get byte
+        char byteReceived = motorClient.read();
+        // store byte in command array
+        switch (byteReceived)
+        {
+          case '\r':
+            if(SERIAL_DEBUG) { Serial.println("CR received"); }
+            command[1] = byteReceived;
+            break;
+
+          case '\n':
+            if(SERIAL_DEBUG) { Serial.println("LF received"); }
+            command[2] = byteReceived;
+            break;
+          
+          default:
+            if(SERIAL_DEBUG) { Serial.printlnf("Command %c received"); }
+            command[0] = byteReceived;
+            break;
         }
-        motorClient.println("Connected to Olivia Robot!");
-        motorClient.println(WiFi.localIP());
-        motorClient.println(WiFi.subnetMask());
       }
+      motorClient.flush();
 
-      while(motorClient.available()) {
-        motorServer.write(motorClient.read());
+      // react to command
+      switch (command[0])
+      {
+        case '0':
+          break;
+
+        case '1':
+          if(SERIAL_DEBUG) { Serial.println("got command 1 successfully"); }
+          motorServer.println("Moving forward for 1 second ...");
+          rover_forward(127);
+          delay(1000);
+          rover_stop();
+          command[0] = '0';
+          break;
+        
+        default:
+          motorClient.printlnf("Command %c unknown", command[0]);
+          command[0] = '0';
+          break;
       }
     }
-
-    if(millis() - startTime <= sleepTimer) {
-      if(SERIAL_DEBUG) {
-        // Serial.println("no client");
-      }
-      Particle.process();
-      motorClient = motorServer.available();
+  }
+  wifiConnected = false;
+  // try to connect for 3 minutes, then go to sleep
+  unsigned long disconnectTime = millis();
+  if(SERIAL_DEBUG) { Serial.println("WiFi disconnected. Reconnecting ..."); }
+  while(!WiFi.ready()) {
+    if((millis() - disconnectTime) < sleepTimer) {
+      WiFi.connect();
+      if(WiFi.ready()) { Particle.process(); }
     }
     else {
-      System.sleep(WKP, RISING);
+      digitalWrite(WKP, LOW);
+      System.sleep(SLEEP_MODE_DEEP, WKP);
     }
-    
-    if(SERIAL_DEBUG) {
-      Serial.println("WiFi is still connected ...");
-      IPAddress ip = WiFi.resolve("www.google.com");
-      if(ip) {
-        Serial.printlnf("Google connected at: %s", ip.toString());
-      }
-      else {
-        Serial.println("No Google.");
-      }
-    }
-    delay(1000);
-  }
-
-  Particle.process();
-
-  if(SERIAL_DEBUG) {
-    bool wifiReady = WiFi.ready();
-    Serial.printlnf("WiFi.ready(): %d", wifiReady);
   }
 }
