@@ -5,6 +5,8 @@ A continuing educational robotics project for myself and my daughter. Named as s
 ## Current Contents
 
 1. Source code for [Particle Photon &trade;](http://particle.io) microcontroller.
+1. Source code for Android controller application.
+1. Source code for Python controller
 
 ## Coming Soon
 
