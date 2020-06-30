@@ -244,11 +244,12 @@ void loop() {
   }
   // set loop startTime
   unsigned long loopStartTime = millis();
-  // loop while WiFi is connected
+
   bool wifiConnected = false;
+  // loop while WiFi is connected
   while(WiFi.ready()) {
     if(SERIAL_DEBUG && !wifiConnected) {
-      Serial.println("WiFi ready");
+      Serial.println("WiFi ready loop begin");
     }
     wifiConnected = true;
     // check for client connection
@@ -276,20 +277,20 @@ void loop() {
         // store byte in command array
         switch (byteReceived)
         {
-        case '\r':
-          if(SERIAL_DEBUG) { Serial.println("CR received"); }
-          command[1] = byteReceived;
-          break;
+          case '\r':
+            if(SERIAL_DEBUG) { Serial.println("CR received"); }
+            command[1] = byteReceived;
+            break;
 
-        case '\n':
-          if(SERIAL_DEBUG) { Serial.println("LF received"); }
-          command[2] = byteReceived;
-          break;
-        
-        default:
-          if(SERIAL_DEBUG) { Serial.printlnf("Command %c received"); }
-          command[0] = byteReceived;
-          break;
+          case '\n':
+            if(SERIAL_DEBUG) { Serial.println("LF received"); }
+            command[2] = byteReceived;
+            break;
+          
+          default:
+            if(SERIAL_DEBUG) { Serial.printlnf("Command %c received"); }
+            command[0] = byteReceived;
+            break;
         }
       }
       motorClient.flush();
@@ -297,17 +298,22 @@ void loop() {
       // react to command
       switch (command[0])
       {
-      case '1':
-        if(SERIAL_DEBUG) { Serial.println("got command 1 successfully"); }
-        motorServer.println("Moving forward for 1 second ...");
-        rover_forward(127);
-        delay(1000);
-        rover_stop();
-        break;
-      
-      default:
-        motorClient.printlnf("Command %c unknown", command[0]);
-        break;
+        case '0':
+          break;
+
+        case '1':
+          if(SERIAL_DEBUG) { Serial.println("got command 1 successfully"); }
+          motorServer.println("Moving forward for 1 second ...");
+          rover_forward(127);
+          delay(1000);
+          rover_stop();
+          command[0] = '0';
+          break;
+        
+        default:
+          motorClient.printlnf("Command %c unknown", command[0]);
+          command[0] = '0';
+          break;
       }
     }
   }
