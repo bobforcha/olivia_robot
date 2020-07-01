@@ -1,5 +1,5 @@
-#!/usr/bin/python
-from Tkinter import *
+#!/usr/bin/python3
+from tkinter import *
 
 def sel():
     selection = "Speed = " + str(speed.get())
