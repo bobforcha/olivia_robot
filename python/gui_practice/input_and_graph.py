@@ -2,7 +2,9 @@ import sys
 import random
 import matplotlib
 matplotlib.use('Qt5Agg')
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
@@ -12,7 +14,7 @@ class MplCanvas(FigureCanvas):
         self.axes = fig.add_subplot(111)
         super(MplCanvas, self).__init__(fig)
 
-class MainWindow(QtWidgets.QMainWindow):
+class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
@@ -23,22 +25,25 @@ class MainWindow(QtWidgets.QMainWindow):
         toolbar = NavigationToolbar(self.canvas, self)
 
         # create main layout placeholder widget
-        central_widget = QtWidgets.QWidget()
+        central_widget = QWidget()
         # create placeholder widget for input section
-        input_widget = QtWidgets.QWidget()
+        input_widget = QWidget()
         # create placeholder widget for plot section
-        plot_widget = QtWidgets.QWidget()
+        plot_widget = QWidget()
 
         # create main horizontal layout
-        main_layout = QtWidgets.QHBoxLayout()
-        # create vertical layout for inputs
-        input_layout = QtWidgets.QVBoxLayout()
+        main_layout = QHBoxLayout()
+        # create form layout for inputs
+        input_layout = QFormLayout()
         # create vertical layout for plot menu
-        plot_layout = QtWidgets.QVBoxLayout()
+        plot_layout = QVBoxLayout()
 
-        # add line edit and button to input layout
-        input_layout.addWidget(QtWidgets.QLineEdit())
-        input_layout.addWidget(QtWidgets.QPushButton("Update Max"))
+        # add line edit to input layout
+        self.max_input = QLineEdit()
+        self.max_input.setValidator(QIntValidator())
+        self.max_input.setMaxLength(4)
+        input_layout.addRow("Max Random Value", self.max_input)
+        self.max_input.editingFinished.connect(self.update_rand_max)
 
         # set input_widget layout
         input_widget.setLayout(input_layout)
@@ -71,7 +76,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show()
 
         # set timer to refresh plot
-        self.timer = QtCore.QTimer()
+        self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.update_plot)
         self.timer.start()
@@ -82,7 +87,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.axes.plot(self.xdata, self.ydata, 'r')
         self.canvas.draw()
 
-app = QtWidgets.QApplication(sys.argv)
+    def update_rand_max(self):
+        self.rand_max = int(self.max_input.text())
+
+app = QApplication(sys.argv)
 win = MainWindow()
 app.exec_()
 
