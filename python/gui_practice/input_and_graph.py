@@ -59,10 +59,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setCentralWidget(central_widget)
         
-        # plot random data
+        # plot random data with max controlled by user
         n_data = 50
+        self.rand_max = 10
         self.xdata = list(range(n_data))
-        self.ydata = [random.randint(0,10) for i in range(n_data)]
+        self.ydata = [random.randint(0,self.rand_max) for i in range(n_data)]
         # Call function to live update plot
         self.update_plot()
 
@@ -76,7 +77,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.start()
 
     def update_plot(self):
-        self.ydata = self.ydata[1:] + [random.randint(0,10)]
+        self.ydata = self.ydata[1:] + [random.randint(0,self.rand_max)]
         self.canvas.axes.cla()
         self.canvas.axes.plot(self.xdata, self.ydata, 'r')
         self.canvas.draw()
