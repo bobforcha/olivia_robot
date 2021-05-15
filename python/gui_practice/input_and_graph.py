@@ -16,8 +16,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
+        self.setWindowTitle("Input and Graph")
+
         self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
         self.canvas.axes.plot([0, 1, 2, 3, 4], [0, 10, 3, 40, 17])
+        toolbar = NavigationToolbar(self.canvas, self)
 
         # create main layout placeholder widget
         central_widget = QtWidgets.QWidget()
@@ -30,6 +33,8 @@ class MainWindow(QtWidgets.QMainWindow):
         main_layout = QtWidgets.QHBoxLayout()
         # create vertical layout for inputs
         input_layout = QtWidgets.QVBoxLayout()
+        # create vertical layout for plot menu
+        plot_layout = QtWidgets.QVBoxLayout()
 
         # add line edit and button to input layout
         input_layout.addWidget(QtWidgets.QLineEdit())
@@ -38,9 +43,16 @@ class MainWindow(QtWidgets.QMainWindow):
         # set input_widget layout
         input_widget.setLayout(input_layout)
 
+        # add menu and plot to plot widget
+        plot_layout.addWidget(toolbar)
+        plot_layout.addWidget(self.canvas)
+
+        # set plot_widget layout
+        plot_widget.setLayout(plot_layout)
+
         # set main_layout
         main_layout.addWidget(input_widget)
-        main_layout.addWidget(self.canvas)
+        main_layout.addWidget(plot_widget)
 
         # set central_widget layout
         central_widget.setLayout(main_layout)
