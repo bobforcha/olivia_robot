@@ -58,8 +58,28 @@ class MainWindow(QtWidgets.QMainWindow):
         central_widget.setLayout(main_layout)
 
         self.setCentralWidget(central_widget)
+        
+        # plot random data
+        n_data = 50
+        self.xdata = list(range(n_data))
+        self.ydata = [random.randint(0,10) for i in range(n_data)]
+        # Call function to live update plot
+        self.update_plot()
 
+        # show main window
         self.show()
+
+        # set timer to refresh plot
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(100)
+        self.timer.timeout.connect(self.update_plot)
+        self.timer.start()
+
+    def update_plot(self):
+        self.ydata = self.ydata[1:] + [random.randint(0,10)]
+        self.canvas.axes.cla()
+        self.canvas.axes.plot(self.xdata, self.ydata, 'r')
+        self.canvas.draw()
 
 app = QtWidgets.QApplication(sys.argv)
 win = MainWindow()
